@@ -10,19 +10,41 @@ class RegistrationScreen extends StatefulWidget {
 
 class _RegistrationScreenState extends State<RegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
+  
+  // Controllers
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController(); // Latihan 1: Nomor Telepon
+  final _birthDateController = TextEditingController(); // Latihan 2: Tanggal Lahir
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  // States
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
+  
+  // Latihan 2: Variabel Tanggal Lahir
+  DateTime? _selectedDate;
+
+  // Latihan 3: Variabel Jenis Kelamin
+  String? _selectedGender;
+  final List<String> _genderOptions = ['Laki-laki', 'Perempuan'];
+
+  // Latihan 4: Variabel Syarat & Ketentuan
+  bool _agreedToTerms = false;
+
+  // Latihan 5: Variabel Kekuatan Password
+  String _passwordStrength = '';
+  Color _strengthColor = Colors.grey;
+  double _strengthValue = 0.0;
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
+    _birthDateController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -47,6 +69,29 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
     if (!emailRegex.hasMatch(value.trim())) {
       return 'Format email tidak valid';
+    }
+    return null;
+  }
+
+  // Latihan 1: Validasi Nomor Telepon
+  String? _validatePhone(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Nomor telepon wajib diisi';
+    }
+    final phoneRegex = RegExp(r'^[0-9]+$');
+    if (!phoneRegex.hasMatch(value.trim())) {
+      return 'Nomor telepon hanya boleh berisi angka';
+    }
+    if (value.trim().length < 10 || value.trim().length > 13) {
+      return 'Nomor telepon harus 10 - 13 digit';
+    }
+    return null;
+  }
+
+  // Latihan 2: Validasi Tanggal Lahir
+  String? _validateBirthDate(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Tanggal lahir wajib diisi';
     }
     return null;
   }
@@ -79,8 +124,65 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return null;
   }
 
+  // Latihan 2: Fungsi Date Picker
+  Future<void> _selectBirthDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(2000, 1, 1),
+      firstDate: DateTime(1950),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+        _birthDateController.text =
+            "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+      });
+    }
+  }
+
+  // Latihan 5: Fungsi Cek Kekuatan Password
+  void _checkPasswordStrength(String value) {
+    setState(() {
+      if (value.isEmpty) {
+        _passwordStrength = '';
+        _strengthValue = 0.0;
+        _strengthColor = Colors.grey;
+      } else if (value.length < 8) {
+        _passwordStrength = 'Kekuatan Password: Lemah';
+        _strengthValue = 0.33;
+        _strengthColor = Colors.red;
+      } else if (value.contains(RegExp(r'[A-Z]')) && value.contains(RegExp(r'[0-9]'))) {
+        if (value.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+          _passwordStrength = 'Kekuatan Password: Kuat';
+          _strengthValue = 1.0;
+          _strengthColor = Colors.green;
+        } else {
+          _passwordStrength = 'Kekuatan Password: Sedang';
+          _strengthValue = 0.66;
+          _strengthColor = Colors.orange;
+        }
+      } else {
+        _passwordStrength = 'Kekuatan Password: Sedang';
+        _strengthValue = 0.66;
+        _strengthColor = Colors.orange;
+      }
+    });
+  }
+
   // Handler Submit Form
   void _submitForm() {
+    // Latihan 4: Validasi Checkbox Syarat & Ketentuan
+    if (!_agreedToTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Anda harus menyetujui syarat & ketentuan terlebih dahulu'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
@@ -98,7 +200,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             title: const Text('Registrasi Berhasil'),
             content: Text(
               'Selamat, ${_nameController.text}!\n'
-              'Email: ${_emailController.text}',
+              'Email: ${_emailController.text}\n'
+              'Telepon: ${_phoneController.text}\n'
+              'Tanggal Lahir: ${_birthDateController.text}\n'
+              'Jenis Kelamin: $_selectedGender',
             ),
             actions: [
               TextButton(
@@ -118,17 +223,27 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   // Reset Form
   void _resetForm() {
     _formKey.currentState!.reset();
-    _nameController.clear();
-    _emailController.clear();
-    _passwordController.clear();
-    _confirmPasswordController.clear();
+    setState(() {
+      _nameController.clear();
+      _emailController.clear();
+      _phoneController.clear();
+      _birthDateController.clear();
+      _passwordController.clear();
+      _confirmPasswordController.clear();
+      _selectedDate = null;
+      _selectedGender = null;
+      _agreedToTerms = false;
+      _passwordStrength = '';
+      _strengthValue = 0.0;
+      _strengthColor = Colors.grey;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Form Registrasi'),
+        title: const Text('Form Registrasi & Latihan'),
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
       ),
@@ -174,12 +289,73 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   keyboardType: TextInputType.emailAddress,
                   validator: _validateEmail,
                 ),
+
+                // Latihan 1: Field Nomor Telepon
+                CustomTextField(
+                  controller: _phoneController,
+                  label: 'Nomor Telepon',
+                  hint: 'Masukkan nomor telepon (10-13 digit)',
+                  prefixIcon: Icons.phone,
+                  keyboardType: TextInputType.phone,
+                  validator: _validatePhone,
+                ),
+
+                // Latihan 2: Field Tanggal Lahir
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: TextFormField(
+                    controller: _birthDateController,
+                    readOnly: true,
+                    onTap: () => _selectBirthDate(context),
+                    decoration: InputDecoration(
+                      labelText: 'Tanggal Lahir',
+                      hintText: 'Pilih tanggal lahir Anda',
+                      prefixIcon: const Icon(Icons.calendar_today),
+                      border: const OutlineInputBorder(),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                    ),
+                    validator: _validateBirthDate,
+                  ),
+                ),
+
+                // Latihan 3: Dropdown Jenis Kelamin
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedGender,
+                    decoration: InputDecoration(
+                      labelText: 'Jenis Kelamin',
+                      hintText: 'Pilih jenis kelamin',
+                      prefixIcon: const Icon(Icons.wc),
+                      border: const OutlineInputBorder(),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                    ),
+                    items: _genderOptions.map((String gender) {
+                      return DropdownMenuItem<String>(
+                        value: gender,
+                        child: Text(gender),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        _selectedGender = newValue;
+                      });
+                    },
+                    validator: (value) =>
+                        value == null ? 'Jenis kelamin wajib dipilih' : null,
+                  ),
+                ),
                 
                 // Field Password
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
                   child: TextFormField(
                     controller: _passwordController,
+                    onChanged: (value) {
+                      _checkPasswordStrength(value); // Latihan 5: Cek Kekuatan
+                    },
                     decoration: InputDecoration(
                       labelText: 'Password',
                       hintText: 'Minimal 8 karakter, huruf kapital, angka',
@@ -202,6 +378,25 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     validator: _validatePassword,
                   ),
                 ),
+
+                // Latihan 5: Indikator Kekuatan Password
+                if (_passwordController.text.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  LinearProgressIndicator(
+                    value: _strengthValue,
+                    color: _strengthColor,
+                    backgroundColor: Colors.grey[300],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _passwordStrength,
+                    style: TextStyle(
+                      color: _strengthColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
                 
                 // Field Konfirmasi Password
                 Padding(
@@ -214,7 +409,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                          _obscureConfirmPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
                         ),
                         onPressed: () {
                           setState(() {
@@ -230,7 +427,21 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     validator: _validateConfirmPassword,
                   ),
                 ),
-                const SizedBox(height: 24),
+
+                // Latihan 4: Checkbox Syarat & Ketentuan
+                CheckboxListTile(
+                  title: const Text('Setuju dengan Syarat & Ketentuan'),
+                  value: _agreedToTerms,
+                  onChanged: (bool? value) {
+                    setState(() {
+                      _agreedToTerms = value ?? false;
+                    });
+                  },
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                ),
+
+                const SizedBox(height: 16),
                 
                 // Tombol Submit
                 ElevatedButton(
@@ -261,6 +472,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   ),
                   child: const Text('Reset'),
                 ),
+                const SizedBox(height: 24),
               ],
             ),
           ),
